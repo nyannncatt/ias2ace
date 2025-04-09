@@ -252,15 +252,16 @@ const App = () => {
   };
 
   const logout = async () => {
+    // Clear login state
     await supabase.auth.signOut();
     setIsAuthenticated(false);
-    setEmail(''); // Clear email state
-    setPassword(''); // Clear password state
-    setMessage(''); // Clear any messages
-    setCaptchaText(''); // Clear CAPTCHA text
+    setEmail(''); // Clear email
+    setPassword(''); // Clear password
     setCaptchaInput(''); // Clear CAPTCHA input
-    // Redirect to login page after logout
-    window.location.href = '/'; // Forces a reload of the page and resets everything
+    setMessage(''); // Clear any message
+
+    // Redirect to login page
+    window.location.href = '/'; // Or use Navigate from react-router to redirect
   };
 
   return (
