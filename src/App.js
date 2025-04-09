@@ -6,10 +6,59 @@ import './App.css';
 // Dashboard component
 const Dashboard = ({ logout }) => (
   <div className="app-container">
-    <div className="auth-container">
-      <h1>Dashboard</h1>
-      <p>Welcome to the Dashboard!</p>
-      <button onClick={logout} className="btn">Logout</button>
+    <div className="dashboard-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <h3>Menu</h3>
+        <ul>
+          <li>Home</li>
+          <li>Profile</li>
+          <li>Settings</li>
+          <li>Messages</li>
+        </ul>
+      </div>
+
+      {/* Main Content */}
+      <div className="main-content">
+        <h1>Dashboard</h1>
+        <p>Welcome to your personalized Dashboard!</p>
+
+        {/* User Info */}
+        <div className="user-info">
+          <h2>Hello, meowmwoq</h2>
+          <p>Account Status: Active</p>
+        </div>
+
+        {/* Statistics Section */}
+        <div className="stats-container">
+          <div className="stat-item">
+            <h3>Total Orders</h3>
+            <p>1,234</p>
+          </div>
+          <div className="stat-item">
+            <h3>Pending Tasks</h3>
+            <p>5</p>
+          </div>
+          <div className="stat-item">
+            <h3>Messages</h3>
+            <p>12 new messages</p>
+          </div>
+        </div>
+
+        {/* Graph/Chart (placeholder for now) */}
+        <div className="chart-container">
+          <h3>Activity Overview</h3>
+          <div className="chart-placeholder">
+            {/* Imagine a chart here */}
+            <p>Graph would be displayed here</p>
+          </div>
+        </div>
+
+        {/* Logout Button */}
+        <div className="logout-section">
+          <button onClick={logout} className="btn">Logout</button>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -128,6 +177,7 @@ const App = () => {
       const { data } = await supabase.auth.getSession();
       if (data?.session) setIsAuthenticated(true);
     };
+
     getSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -139,6 +189,23 @@ const App = () => {
     }
 
     return () => listener?.subscription?.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const checkForOtpConfirmation = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const otpToken = urlParams.get('access_token');
+      if (otpToken) {
+        const { data, error } = await supabase.auth.setSession(otpToken);
+        if (error) {
+          setMessage('Failed to verify OTP: ' + error.message);
+        } else {
+          setIsAuthenticated(true);
+        }
+      }
+    };
+
+    checkForOtpConfirmation();
   }, []);
 
   const generateCaptcha = () => {
@@ -185,8 +252,16 @@ const App = () => {
   };
 
   const logout = async () => {
+    // Clear login state
     await supabase.auth.signOut();
     setIsAuthenticated(false);
+    setEmail(''); // Clear email
+    setPassword(''); // Clear password
+    setCaptchaInput(''); // Clear CAPTCHA input
+    setMessage(''); // Clear any message
+
+    // Redirect to login page
+    window.location.href = '/'; // Or use Navigate from react-router to redirect
   };
 
   return (
