@@ -1,9 +1,9 @@
-// src/App.js
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom'; // Switch to HashRouter
 import supabase from './supabase';
 import './App.css';
 
+// Dashboard component
 const Dashboard = ({ logout }) => (
   <div className="app-container">
     <div className="auth-container">
@@ -14,6 +14,7 @@ const Dashboard = ({ logout }) => (
   </div>
 );
 
+// Login component
 const Login = ({
   email,
   setEmail,
