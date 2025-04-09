@@ -261,7 +261,7 @@ const App = () => {
     setMessage(''); // Clear any message
 
     // Redirect to login page
-    window.location.href = '/'; // Or use Navigate from react-router to redirect
+  window.location.hash = '/';
   };
 
   return (

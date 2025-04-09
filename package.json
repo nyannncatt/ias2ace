@@ -2,7 +2,7 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://nyanncatt.github.io/ias2ace/",
+  "homepage": "https://nyanncatt.github.io/ias2ace",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "@testing-library/dom": "^10.4.0",
