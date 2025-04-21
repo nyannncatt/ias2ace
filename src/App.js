@@ -1,69 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom'; // Switch to HashRouter
+import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import supabase from './supabase';
 import './App.css';
 
-// Dashboard component
-const Dashboard = ({ logout }) => (
-  <div className="app-container">
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <h3>Menu</h3>
-        <ul>
-          <li>Home</li>
-          <li>Profile</li>
-          <li>Settings</li>
-          <li>Messages</li>
-        </ul>
-      </div>
+const Dashboard = ({ logout }) => {
+  const [systemInfo, setSystemInfo] = useState({});
+  const [runningApps, setRunningApps] = useState([]);
 
-      {/* Main Content */}
-      <div className="main-content">
-        <h1>Dashboard</h1>
-        <p>Welcome to your personalized Dashboard!</p>
+  useEffect(() => {
+    const fetchInfo = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/system-info'); // Adjust port if needed
+        const data = await response.json();
+        setSystemInfo(data.system);
+        setRunningApps(data.apps);
+      } catch (error) {
+        console.error('Failed to fetch system info:', error);
+      }
+    };
 
-        {/* User Info */}
-        <div className="user-info">
-          <h2>Hello, meowmwoq</h2>
-          <p>Account Status: Active</p>
+    fetchInfo();
+  }, []);
+
+  return (
+    <div className="app-container">
+      <div className="dashboard-container">
+        <div className="sidebar">
+          <h3>Menu</h3>
+          <ul>
+            <li>System Info</li>
+            <li>Processes</li>
+            <li>Settings</li>
+          </ul>
         </div>
 
-        {/* Statistics Section */}
-        <div className="stats-container">
-          <div className="stat-item">
-            <h3>Total Orders</h3>
-            <p>1,234</p>
-          </div>
-          <div className="stat-item">
-            <h3>Pending Tasks</h3>
-            <p>5</p>
-          </div>
-          <div className="stat-item">
-            <h3>Messages</h3>
-            <p>12 new messages</p>
-          </div>
-        </div>
+        <div className="main-content">
+          <h1>PC Dashboard</h1>
 
-        {/* Graph/Chart (placeholder for now) */}
-        <div className="chart-container">
-          <h3>Activity Overview</h3>
-          <div className="chart-placeholder">
-            {/* Imagine a chart here */}
-            <p>Graph would be displayed here</p>
+          <div className="user-info">
+            <h2>System Information</h2>
+            <p><strong>Platform:</strong> {systemInfo.platform}</p>
+            <p><strong>Architecture:</strong> {systemInfo.arch}</p>
+            <p><strong>CPU:</strong> {systemInfo.cpu}</p>
+            <p><strong>Total Memory:</strong> {systemInfo.totalMem}</p>
+            <p><strong>Free Memory:</strong> {systemInfo.freeMem}</p>
           </div>
-        </div>
 
-        {/* Logout Button */}
-        <div className="logout-section">
-          <button onClick={logout} className="btn">Logout</button>
+          <div className="stats-container">
+            <h2>Running Applications</h2>
+            <ul>
+              {runningApps.map((app, index) => (
+                <li key={index}>{app}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="logout-section">
+            <button onClick={logout} className="btn">Logout</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-// Login component
+
 const Login = ({
   email,
   setEmail,
@@ -76,14 +77,14 @@ const Login = ({
   setCaptchaInput,
   captchaText,
   generateCaptcha,
-  isLocalhost
+  isLocalhost,
+  resendVerificationEmail
 }) => (
   <div className="app-container">
     <div className="auth-container">
-      <h1>SUPPPPAA NIQQAAAAAA</h1>
+      <h1>test-dev</h1>
 
       <div className="auth-columns">
-        {/* Left Section: Sign In with Email and Password */}
         <div className="auth-box">
           <h2>Sign In with Email and Password</h2>
           <input
@@ -123,7 +124,6 @@ const Login = ({
           <button onClick={signInWithEmail} className="btn">Sign In with Password</button>
         </div>
 
-        {/* Right Section: Sign In with Email OTP */}
         <div className="auth-box">
           <h2>Sign In with Email OTP</h2>
           <input
@@ -158,6 +158,7 @@ const Login = ({
       </div>
 
       {message && <p className="message">{message}</p>}
+      <button className="btn btn-secondary" onClick={resendVerificationEmail}>Resend Verification Email</button>
     </div>
   </div>
 );
@@ -169,6 +170,7 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [captchaText, setCaptchaText] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
+  const [loginAttempts, setLoginAttempts] = useState(0);
 
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -180,7 +182,7 @@ const App = () => {
 
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
     });
 
@@ -226,14 +228,24 @@ const App = () => {
   const signInWithEmail = async () => {
     if (!validateCaptcha()) return;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    if (loginAttempts >= 5) {
+      setMessage('Too many attempts. Please wait a few minutes.');
+      return;
+    }
+
+    setLoginAttempts((prev) => prev + 1);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setMessage('Error signing in: ' + error.message);
     } else {
+      if (!data.user?.email_confirmed_at) {
+        setMessage('Please verify your email before logging in.');
+        await supabase.auth.signOut();
+        return;
+      }
+
       setMessage('Signed in successfully!');
       setIsAuthenticated(true);
     }
@@ -251,17 +263,27 @@ const App = () => {
     }
   };
 
+  const resendVerificationEmail = async () => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+
+    if (error) {
+      setMessage('Failed to resend verification email.');
+    } else {
+      setMessage('Verification email sent. Please check your inbox.');
+    }
+  };
+
   const logout = async () => {
-    // Clear login state
     await supabase.auth.signOut();
     setIsAuthenticated(false);
-    setEmail(''); // Clear email
-    setPassword(''); // Clear password
-    setCaptchaInput(''); // Clear CAPTCHA input
-    setMessage(''); // Clear any message
-
-    // Redirect to login page
-  window.location.hash = '/';
+    setEmail('');
+    setPassword('');
+    setCaptchaInput('');
+    setMessage('');
+    window.location.hash = '/';
   };
 
   return (
@@ -286,6 +308,7 @@ const App = () => {
                 captchaText={captchaText}
                 generateCaptcha={generateCaptcha}
                 isLocalhost={isLocalhost}
+                resendVerificationEmail={resendVerificationEmail}
               />
             )
           }
