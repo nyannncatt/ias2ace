@@ -14,11 +14,11 @@ const Dashboard = ({ logout }) => {
       try {
         setLoading(true);
         const response = await fetch('http://localhost:3001/system-info');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch system info');
         }
-        
+
         const data = await response.json();
         setSystemInfo(data.system);
         setRunningApps(data.apps);
@@ -82,7 +82,6 @@ const Dashboard = ({ logout }) => {
   );
 };
 
-
 const Login = ({
   email,
   setEmail,
@@ -90,93 +89,77 @@ const Login = ({
   setPassword,
   signInWithEmail,
   signInWithEmailOtp,
+  signUpWithEmail,
   message,
   captchaInput,
   setCaptchaInput,
   captchaText,
   generateCaptcha,
   isLocalhost,
-  resendVerificationEmail
+  resendVerificationEmail,
+  isSignUpMode,
+  setIsSignUpMode
 }) => (
   <div className="app-container">
     <div className="auth-container">
       <h1>test-dev</h1>
 
-      <div className="auth-columns">
-        <div className="auth-box">
-          <h2>Sign In with Email and Password</h2>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="input-field"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="input-field"
-          />
+      <div className="auth-box">
+        <h2>{isSignUpMode ? 'Sign Up' : 'Sign In'} with Email</h2>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="input-field"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="input-field"
+        />
 
-          {isLocalhost && (
-            <div className="captcha-box">
-              <label>Enter CAPTCHA:</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="text"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                  placeholder="CAPTCHA"
-                  className="input-field"
-                />
-                <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{captchaText}</span>
-                <button type="button" className="btn btn-secondary" onClick={generateCaptcha}>
-                  Refresh
-                </button>
-              </div>
+        {isLocalhost && (
+          <div className="captcha-box">
+            <label>Enter CAPTCHA:</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="text"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                placeholder="CAPTCHA"
+                className="input-field"
+              />
+              <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{captchaText}</span>
+              <button type="button" className="btn btn-secondary" onClick={generateCaptcha}>
+                Refresh
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          <button onClick={signInWithEmail} className="btn">Sign In with Password</button>
-        </div>
+        {isSignUpMode ? (
+          <button onClick={signUpWithEmail} className="btn">Sign Up</button>
+        ) : (
+          <>
+            <button onClick={signInWithEmail} className="btn">Sign In with Password</button>
+            <button onClick={signInWithEmailOtp} className="btn">Send OTP to Email</button>
+          </>
+        )}
 
-        <div className="auth-box">
-          <h2>Sign In with Email OTP</h2>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            className="input-field"
-          />
+        <button
+          onClick={() => setIsSignUpMode(!isSignUpMode)}
+          className="btn btn-link"
+          style={{ marginTop: '10px' }}
+        >
+          {isSignUpMode ? 'Have an account? Sign In' : 'New here? Sign Up'}
+        </button>
 
-          {isLocalhost && (
-            <div className="captcha-box">
-              <label>Enter CAPTCHA:</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="text"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                  placeholder="CAPTCHA"
-                  className="input-field"
-                />
-                <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{captchaText}</span>
-                <button type="button" className="btn btn-secondary" onClick={generateCaptcha}>
-                  Refresh
-                </button>
-              </div>
-            </div>
-          )}
-
-          <button onClick={signInWithEmailOtp} className="btn">Send OTP to Email</button>
-        </div>
+        <button className="btn btn-secondary" onClick={resendVerificationEmail}>Resend Verification Email</button>
+        {message && <p className="message">{message}</p>}
       </div>
-
-      {message && <p className="message">{message}</p>}
-      <button className="btn btn-secondary" onClick={resendVerificationEmail}>Resend Verification Email</button>
     </div>
   </div>
 );
@@ -189,6 +172,7 @@ const App = () => {
   const [captchaText, setCaptchaText] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -281,11 +265,20 @@ const App = () => {
     }
   };
 
+  const signUpWithEmail = async () => {
+    if (!validateCaptcha()) return;
+
+    const { data, error } = await supabase.auth.signUp({ email, password });
+
+    if (error) {
+      setMessage('Error signing up: ' + error.message);
+    } else {
+      setMessage('Signup successful! Please check your email to verify your account.');
+    }
+  };
+
   const resendVerificationEmail = async () => {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-    });
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
 
     if (error) {
       setMessage('Failed to resend verification email.');
@@ -320,6 +313,7 @@ const App = () => {
                 setPassword={setPassword}
                 signInWithEmail={signInWithEmail}
                 signInWithEmailOtp={signInWithEmailOtp}
+                signUpWithEmail={signUpWithEmail}
                 message={message}
                 captchaInput={captchaInput}
                 setCaptchaInput={setCaptchaInput}
@@ -327,15 +321,15 @@ const App = () => {
                 generateCaptcha={generateCaptcha}
                 isLocalhost={isLocalhost}
                 resendVerificationEmail={resendVerificationEmail}
+                isSignUpMode={isSignUpMode}
+                setIsSignUpMode={setIsSignUpMode}
               />
             )
           }
         />
         <Route
           path="/dashboard"
-          element={
-            isAuthenticated ? <Dashboard logout={logout} /> : <Navigate to="/" replace />
-          }
+          element={isAuthenticated ? <Dashboard logout={logout} /> : <Navigate to="/" replace />}
         />
       </Routes>
     </Router>
