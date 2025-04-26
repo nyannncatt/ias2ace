@@ -6,15 +6,26 @@ import './App.css';
 const Dashboard = ({ logout }) => {
   const [systemInfo, setSystemInfo] = useState({});
   const [runningApps, setRunningApps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const response = await fetch('http://localhost:3001/system-info'); // Adjust port if needed
+        setLoading(true);
+        const response = await fetch('http://localhost:3001/system-info');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch system info');
+        }
+        
         const data = await response.json();
         setSystemInfo(data.system);
         setRunningApps(data.apps);
+        setLoading(false);
       } catch (error) {
+        setLoading(false);
+        setError(error.message);
         console.error('Failed to fetch system info:', error);
       }
     };
@@ -37,23 +48,30 @@ const Dashboard = ({ logout }) => {
         <div className="main-content">
           <h1>PC Dashboard</h1>
 
-          <div className="user-info">
-            <h2>System Information</h2>
-            <p><strong>Platform:</strong> {systemInfo.platform}</p>
-            <p><strong>Architecture:</strong> {systemInfo.arch}</p>
-            <p><strong>CPU:</strong> {systemInfo.cpu}</p>
-            <p><strong>Total Memory:</strong> {systemInfo.totalMem}</p>
-            <p><strong>Free Memory:</strong> {systemInfo.freeMem}</p>
-          </div>
+          {loading && <div>Loading system info...</div>}
+          {error && <div>Error: {error}</div>}
 
-          <div className="stats-container">
-            <h2>Running Applications</h2>
-            <ul>
-              {runningApps.map((app, index) => (
-                <li key={index}>{app}</li>
-              ))}
-            </ul>
-          </div>
+          {!loading && !error && (
+            <>
+              <div className="user-info">
+                <h2>System Information</h2>
+                <p><strong>Platform:</strong> {systemInfo.platform}</p>
+                <p><strong>Architecture:</strong> {systemInfo.arch}</p>
+                <p><strong>CPU:</strong> {systemInfo.cpu}</p>
+                <p><strong>Total Memory:</strong> {systemInfo.totalMem} MB</p>
+                <p><strong>Free Memory:</strong> {systemInfo.freeMem} MB</p>
+              </div>
+
+              <div className="stats-container">
+                <h2>Running Applications</h2>
+                <ul>
+                  {runningApps.map((app, index) => (
+                    <li key={index}>{app}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
 
           <div className="logout-section">
             <button onClick={logout} className="btn">Logout</button>
