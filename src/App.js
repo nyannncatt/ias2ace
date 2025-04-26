@@ -14,11 +14,7 @@ const Dashboard = ({ logout }) => {
       try {
         setLoading(true);
         const response = await fetch('http://localhost:3001/system-info');
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch system info');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch system info');
         const data = await response.json();
         setSystemInfo(data.system);
         setRunningApps(data.apps);
@@ -29,7 +25,6 @@ const Dashboard = ({ logout }) => {
         console.error('Failed to fetch system info:', error);
       }
     };
-
     fetchInfo();
   }, []);
 
@@ -44,13 +39,10 @@ const Dashboard = ({ logout }) => {
             <li>Settings</li>
           </ul>
         </div>
-
         <div className="main-content">
           <h1>PC Dashboard</h1>
-
           {loading && <div>Loading system info...</div>}
           {error && <div>Error: {error}</div>}
-
           {!loading && !error && (
             <>
               <div className="user-info">
@@ -61,7 +53,6 @@ const Dashboard = ({ logout }) => {
                 <p><strong>Total Memory:</strong> {systemInfo.totalMem} MB</p>
                 <p><strong>Free Memory:</strong> {systemInfo.freeMem} MB</p>
               </div>
-
               <div className="stats-container">
                 <h2>Running Applications</h2>
                 <ul>
@@ -72,7 +63,6 @@ const Dashboard = ({ logout }) => {
               </div>
             </>
           )}
-
           <div className="logout-section">
             <button onClick={logout} className="btn">Logout</button>
           </div>
@@ -102,8 +92,7 @@ const Login = ({
 }) => (
   <div className="app-container">
     <div className="auth-container">
-      <h1>test-dev</h1>
-
+      <h1>drafted-ias2</h1>
       <div className="auth-box">
         <h2>{isSignUpMode ? 'Sign Up' : 'Sign In'} with Email</h2>
         <input
@@ -120,7 +109,6 @@ const Login = ({
           placeholder="Password"
           className="input-field"
         />
-
         {isLocalhost && (
           <div className="captcha-box">
             <label>Enter CAPTCHA:</label>
@@ -139,7 +127,6 @@ const Login = ({
             </div>
           </div>
         )}
-
         {isSignUpMode ? (
           <button onClick={signUpWithEmail} className="btn">Sign Up</button>
         ) : (
@@ -148,16 +135,19 @@ const Login = ({
             <button onClick={signInWithEmailOtp} className="btn">Send OTP to Email</button>
           </>
         )}
-
         <button
-          onClick={() => setIsSignUpMode(!isSignUpMode)}
+          onClick={() => {
+            setIsSignUpMode(!isSignUpMode);
+            if (isLocalhost) generateCaptcha();
+          }}
           className="btn btn-link"
           style={{ marginTop: '10px' }}
         >
           {isSignUpMode ? 'Have an account? Sign In' : 'New here? Sign Up'}
         </button>
-
-        <button className="btn btn-secondary" onClick={resendVerificationEmail}>Resend Verification Email</button>
+        <button className="btn btn-secondary" onClick={resendVerificationEmail}>
+          Resend Verification Email
+        </button>
         {message && <p className="message">{message}</p>}
       </div>
     </div>
@@ -173,7 +163,6 @@ const App = () => {
   const [captchaInput, setCaptchaInput] = useState('');
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
-
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
   useEffect(() => {
@@ -181,17 +170,11 @@ const App = () => {
       const { data } = await supabase.auth.getSession();
       if (data?.session) setIsAuthenticated(true);
     };
-
     getSession();
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
     });
-
-    if (isLocalhost) {
-      generateCaptcha();
-    }
-
+    if (isLocalhost) generateCaptcha();
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
@@ -208,7 +191,6 @@ const App = () => {
         }
       }
     };
-
     checkForOtpConfirmation();
   }, []);
 
@@ -229,25 +211,22 @@ const App = () => {
 
   const signInWithEmail = async () => {
     if (!validateCaptcha()) return;
-
     if (loginAttempts >= 5) {
       setMessage('Too many attempts. Please wait a few minutes.');
       return;
     }
-
     setLoginAttempts((prev) => prev + 1);
-
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
     if (error) {
       setMessage('Error signing in: ' + error.message);
+      generateCaptcha();
     } else {
       if (!data.user?.email_confirmed_at) {
         setMessage('Please verify your email before logging in.');
         await supabase.auth.signOut();
+        generateCaptcha();
         return;
       }
-
       setMessage('Signed in successfully!');
       setIsAuthenticated(true);
     }
@@ -255,11 +234,10 @@ const App = () => {
 
   const signInWithEmailOtp = async () => {
     if (!validateCaptcha()) return;
-
     const { error } = await supabase.auth.signInWithOtp({ email });
-
     if (error) {
       setMessage('Error sending OTP: ' + error.message);
+      generateCaptcha();
     } else {
       setMessage('Check your email for the OTP to log in.');
     }
@@ -267,11 +245,10 @@ const App = () => {
 
   const signUpWithEmail = async () => {
     if (!validateCaptcha()) return;
-
     const { data, error } = await supabase.auth.signUp({ email, password });
-
     if (error) {
       setMessage('Error signing up: ' + error.message);
+      generateCaptcha();
     } else {
       setMessage('Signup successful! Please check your email to verify your account.');
     }
@@ -279,7 +256,6 @@ const App = () => {
 
   const resendVerificationEmail = async () => {
     const { error } = await supabase.auth.resend({ type: 'signup', email });
-
     if (error) {
       setMessage('Failed to resend verification email.');
     } else {
