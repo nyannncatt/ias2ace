@@ -1,7 +1,21 @@
+// App.js
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import supabase from './supabase';
 import './App.css';
+import './ModalMessage.css'; // for modal styles
+
+const Modal = ({ message, onClose }) => {
+  if (!message) return null;
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        <p>{message}</p>
+        <button className="btn" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
 
 const Dashboard = ({ logout }) => {
   const [systemInfo, setSystemInfo] = useState({});
@@ -42,7 +56,7 @@ const Dashboard = ({ logout }) => {
         <div className="main-content">
           <h1>PC Dashboard</h1>
           {loading && <div>Loading system info...</div>}
-          {error && <div>Error: {error}</div>}
+          {error && <Modal message={error} onClose={() => setError('')} />}
           {!loading && !error && (
             <>
               <div className="user-info">
@@ -73,57 +87,31 @@ const Dashboard = ({ logout }) => {
 };
 
 const Login = ({
-  email,
-  setEmail,
-  password,
-  setPassword,
+  email, setEmail,
+  password, setPassword,
   signInWithEmail,
   signInWithEmailOtp,
   signUpWithEmail,
-  message,
-  captchaInput,
-  setCaptchaInput,
-  captchaText,
-  generateCaptcha,
+  captchaInput, setCaptchaInput,
+  captchaText, generateCaptcha,
   isLocalhost,
   resendVerificationEmail,
-  isSignUpMode,
-  setIsSignUpMode
+  isSignUpMode, setIsSignUpMode
 }) => (
   <div className="app-container">
     <div className="auth-container">
       <h1>drafted-ias2</h1>
       <div className="auth-box">
         <h2>{isSignUpMode ? 'Sign Up' : 'Sign In'} with Email</h2>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="input-field"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          className="input-field"
-        />
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="input-field" />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="input-field" />
         {isLocalhost && (
           <div className="captcha-box">
             <label>Enter CAPTCHA:</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <input
-                type="text"
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                placeholder="CAPTCHA"
-                className="input-field"
-              />
-              <span style={{ fontWeight: 'bold', fontSize: '18px' }}>{captchaText}</span>
-              <button type="button" className="btn btn-secondary" onClick={generateCaptcha}>
-                Refresh
-              </button>
+            <div className="captcha-input">
+              <input type="text" value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())} placeholder="CAPTCHA" />
+              <span className="captcha-text">{captchaText}</span>
+              <button type="button" className="btn btn-secondary" onClick={generateCaptcha}>Refresh</button>
             </div>
           </div>
         )}
@@ -135,20 +123,13 @@ const Login = ({
             <button onClick={signInWithEmailOtp} className="btn">Send OTP to Email</button>
           </>
         )}
-        <button
-          onClick={() => {
-            setIsSignUpMode(!isSignUpMode);
-            if (isLocalhost) generateCaptcha();
-          }}
-          className="btn btn-link"
-          style={{ marginTop: '10px' }}
-        >
+        <button className="btn btn-link" onClick={() => {
+          setIsSignUpMode(!isSignUpMode);
+          if (isLocalhost) generateCaptcha();
+        }}>
           {isSignUpMode ? 'Have an account? Sign In' : 'New here? Sign Up'}
         </button>
-        <button className="btn btn-secondary" onClick={resendVerificationEmail}>
-          Resend Verification Email
-        </button>
-        {message && <p className="message">{message}</p>}
+        <button className="btn btn-secondary" onClick={resendVerificationEmail}>Resend Verification Email</button>
       </div>
     </div>
   </div>
@@ -222,12 +203,12 @@ const App = () => {
       generateCaptcha();
     } else {
       if (!data.user?.email_confirmed_at) {
-        setMessage('Please verify your email before logging in.');
+        setMessage('Error signing in: Email not confirmed.');
         await supabase.auth.signOut();
         generateCaptcha();
         return;
       }
-      setMessage('Signed in successfully!');
+      setMessage('');
       setIsAuthenticated(true);
     }
   };
@@ -275,6 +256,7 @@ const App = () => {
 
   return (
     <Router>
+      <Modal message={message} onClose={() => setMessage('')} />
       <Routes>
         <Route
           path="/"
@@ -283,22 +265,16 @@ const App = () => {
               <Navigate to="/dashboard" replace />
             ) : (
               <Login
-                email={email}
-                setEmail={setEmail}
-                password={password}
-                setPassword={setPassword}
+                email={email} setEmail={setEmail}
+                password={password} setPassword={setPassword}
                 signInWithEmail={signInWithEmail}
                 signInWithEmailOtp={signInWithEmailOtp}
                 signUpWithEmail={signUpWithEmail}
-                message={message}
-                captchaInput={captchaInput}
-                setCaptchaInput={setCaptchaInput}
-                captchaText={captchaText}
-                generateCaptcha={generateCaptcha}
+                captchaInput={captchaInput} setCaptchaInput={setCaptchaInput}
+                captchaText={captchaText} generateCaptcha={generateCaptcha}
                 isLocalhost={isLocalhost}
                 resendVerificationEmail={resendVerificationEmail}
-                isSignUpMode={isSignUpMode}
-                setIsSignUpMode={setIsSignUpMode}
+                isSignUpMode={isSignUpMode} setIsSignUpMode={setIsSignUpMode}
               />
             )
           }
